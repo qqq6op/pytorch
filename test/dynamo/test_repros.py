@@ -7706,6 +7706,38 @@ def forward(self, s77 : torch.SymInt, s27 : torch.SymInt, L_x_ : torch.Tensor):
                 ),
             )
 
+    # https://github.com/pytorch/pytorch/issues/151670
+    @requires_cuda
+    @parametrize("backend", ["eager", "inductor"])
+    def test_diagonal_scatter_one_dim_cpu_with_cuda_tensor(self, backend: str):
+        class Model(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, x):
+                y = torch.ones(x.size(0))
+                x = torch.diagonal_scatter(x, y)
+                return x
+
+        model = Model()
+
+        x = torch.rand(1, 2)
+        inputs = [x]
+
+        torch.manual_seed(0)
+
+        device = "cuda"
+        model = model.to(device)
+        inputs = [x.to(device) for x in inputs]
+
+        if backend != "eager":
+            model = torch.compile(model, backend=backend)
+
+        output = model(*inputs)
+
+        self.assertEqual(output.shape, (1, 2))
+        self.assertEqual(output.device, inputs[0].device)
+
 
 class ReproTestsDevice(torch._dynamo.test_case.TestCase):
     def test_sub_alpha_scalar_repro(self, device):
