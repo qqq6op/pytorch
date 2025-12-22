@@ -26,6 +26,7 @@ import functools
 import importlib
 import inspect
 import io
+import json
 import logging
 import math
 import pickle
@@ -4436,6 +4437,26 @@ def strip_local_scope(s: str) -> str:
     return re.sub(pattern, r"\1", s)
 
 
+def format_user_stack_trace(user_stack: traceback.StackSummary | None) -> str:
+    """
+    Format the user stack trace for display in guard failure messages.
+
+    Returns a formatted string with the full stack trace in JSON format per line,
+    or an empty string if no user stack is available.
+    """
+    if user_stack is None or len(user_stack) == 0:
+        return ""
+
+    formatted = "\n  Full recompile user stack trace:\n"
+    for idx, frame in enumerate(user_stack):
+        frame_data = {
+            "name": frame.name,
+            "line": frame.line.strip() if frame.line else "",
+        }
+        formatted += f"    {idx}: {json.dumps(frame_data)}\n"
+    return formatted
+
+
 def get_guard_fail_reason_helper(
     guard_manager: GuardManagerWrapper,
     f_locals: dict[str, object],
@@ -4461,6 +4482,8 @@ def get_guard_fail_reason_helper(
 
     verbose_code_parts: list[str] = []
     guard_debug_info = guard_manager.check_verbose(f_locals)
+    user_stack_str = ""
+
     # For test_export_with_map_cond, the check_verbose fail even without the
     # C++ guard manager. We need to fix the issue to remove the comment.
     # assert not guard_debug_info.result
@@ -4479,6 +4502,10 @@ def get_guard_fail_reason_helper(
             else:
                 reasons = verbose_code_parts
                 verbose_code_parts = []
+
+        # Format user stack trace if available and recompile logging is enabled
+        if guard_debug_info.user_stack:
+            user_stack_str = format_user_stack_trace(guard_debug_info.user_stack)
     elif cache_entry_backend != backend:
         # None of the guard entries failed - a backend match issue
         reason = (
@@ -4524,7 +4551,7 @@ def get_guard_fail_reason_helper(
                 if not is_recompiles_verbose_enabled():
                     break
 
-    reason_str = f"{compile_id}: " + "; ".join(reasons)
+    reason_str = f"{compile_id}: " + "; ".join(reasons) + user_stack_str
     return strip_local_scope(reason_str)
 
 
