@@ -61,13 +61,14 @@ class TestMaxAutotuneBlackwell(TestCase):
             .to(GPU_TYPE)
         )
 
+        epilogue_subtile_regex = f"EPILOGUE_SUBTILE={epilogue_subtile}"
         with config.patch(
             {
                 "max_autotune": True,
                 "triton.enable_persistent_tma_matmul": True,
                 "triton.enable_template_tma_store": tma_store,
-                "triton.enable_epilogue_subtiling": epilogue_subtile,
                 "test_configs.autotune_choice_name_regex": "blackwell_ws_persistent_device_tma",
+                "test_configs.autotune_choice_desc_regex": epilogue_subtile_regex,
             }
         ):
             c_actual, code = run_and_get_code(torch.compile(mm, dynamic=dynamic), a, b)
@@ -259,13 +260,14 @@ class TestMaxAutotuneBlackwell(TestCase):
         )
         x = torch.randn(N).to(torch.float16).to(GPU_TYPE)
 
+        epilogue_subtile_regex = f"EPILOGUE_SUBTILE={epilogue_subtile}"
         with config.patch(
             {
                 "max_autotune": True,
                 "triton.enable_persistent_tma_matmul": True,
                 "triton.enable_template_tma_store": tma_store,
-                "triton.enable_epilogue_subtiling": epilogue_subtile,
                 "test_configs.autotune_choice_name_regex": "blackwell_ws_persistent_device_tma",
+                "test_configs.autotune_choice_desc_regex": epilogue_subtile_regex,
             }
         ):
             c_actual, code = run_and_get_code(
@@ -343,12 +345,13 @@ class TestMaxAutotuneBlackwell(TestCase):
             b[:] = torch.randn(b_shape, dtype=torch.float16)
             b = b.to(GPU_TYPE)
 
+            epilogue_subtile_regex = f"EPILOGUE_SUBTILE={epilogue_subtile}"
             with config.patch(
                 {
                     "triton.enable_tlx_templates": True,
                     "max_autotune": True,
                     "test_configs.autotune_choice_name_regex": template,
-                    "triton.enable_epilogue_subtiling": epilogue_subtile,
+                    "test_configs.autotune_choice_desc_regex": epilogue_subtile_regex,
                 }
             ):
                 c_actual, code = run_and_get_code(
