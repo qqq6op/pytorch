@@ -7708,7 +7708,7 @@ def forward(self, s77 : torch.SymInt, s27 : torch.SymInt, L_x_ : torch.Tensor):
 
     # https://github.com/pytorch/pytorch/issues/151670
     @requires_cuda
-    @parametrize("backend", ["eager", "inductor"])
+    @parametrize("backend", ["eager", "inductor", "aot_eager"])
     def test_single_elem_cpu_with_cuda_tensor(self, backend: str):
         class Model(torch.nn.Module):
             def __init__(self):
@@ -7724,19 +7724,13 @@ def forward(self, s77 : torch.SymInt, s27 : torch.SymInt, L_x_ : torch.Tensor):
         x = torch.rand(1, 2)
         inputs = [x]
 
-        torch.manual_seed(0)
-
         device = "cuda"
         model = model.to(device)
         inputs = [x.to(device) for x in inputs]
 
-        if backend != "eager":
-            model = torch.compile(model, backend=backend)
+        compiled_model = torch.compile(model, backend=backend)
 
-        output = model(*inputs)
-
-        self.assertEqual(output.shape, (1, 2))
-        self.assertEqual(output.device, inputs[0].device)
+        self.assertEqual(model(*inputs), compiled_model(*inputs))
 
 
 class ReproTestsDevice(torch._dynamo.test_case.TestCase):
