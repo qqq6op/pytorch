@@ -1335,64 +1335,14 @@ class TestSelectAlgorithm(BaseTestSelectAlgorithm):
     ):
         if symmetric_act:
 
-            from torch.ao.quantization.quantizer.quantizer import (
-                QuantizationSpec,
-            )
-            from torch.ao.quantization.observer import (
-                HistogramObserver,
-                PerChannelMinMaxObserver,
-            )
-            from torch.ao.quantization.quantizer.xnnpack_quantizer_utils import (
-                QuantizationConfig,
+            from torch.ao.quantization.quantizer.xnnpack_quantizer import (
+                get_symmetric_quantization_config,
             )
             from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
 
-            def get_symmetric_quantization_config(
-                is_qat: bool = False,
-                is_dynamic: bool = False,
-            ):
-                extra_args = {"eps": 2**-12}
-                act_observer_or_fake_quant_ctr = HistogramObserver  # type: ignore[assignment]
-
-                # Copy from x86 default qconfig from torch/ao/quantization/qconfig.py
-                act_quantization_spec = QuantizationSpec(
-                    dtype=torch.int8,
-                    quant_min=-128,
-                    quant_max=127,
-                    qscheme=torch.per_tensor_symmetric,
-                    is_dynamic=is_dynamic,
-                    observer_or_fake_quant_ctr=act_observer_or_fake_quant_ctr.with_args(
-                        **extra_args
-                    ),
-                )
-
-                weight_observer_or_fake_quant_ctr = PerChannelMinMaxObserver
-
-                weight_quantization_spec = QuantizationSpec(
-                    dtype=torch.int8,
-                    quant_min=-128,
-                    quant_max=127,
-                    qscheme=torch.per_channel_symmetric,
-                    ch_axis=0,
-                    is_dynamic=False,
-                    observer_or_fake_quant_ctr=weight_observer_or_fake_quant_ctr.with_args(
-                        **extra_args
-                    ),
-                )
-                bias_quantization_spec = None
-                quantization_config = QuantizationConfig(
-                    act_quantization_spec,
-                    act_quantization_spec,
-                    weight_quantization_spec,
-                    bias_quantization_spec,
-                    is_qat,
-                )
-                return quantization_config
-
             quantizer = X86InductorQuantizer()
-            quantizer.set_global(
-                get_symmetric_quantization_config()
-            )
+            quantizer.set_global(get_symmetric_quantization_config(is_per_channel=True))
+
         B = (2, batch_size) if input_3d else (batch_size,)
         input = torch.randn(*B, in_features).to(dtype=torch.float32)
 
