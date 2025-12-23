@@ -789,7 +789,6 @@ class TensorVariable(VariableTracker):
         # For inplace operations (methods ending with _), we need to propagate
         # tensor metadata from the arguments to self. For example:
         #   x.add_(y) where y.requires_grad=True => x.requires_grad becomes True
-        # This is similar to the fix in method___setitem__.
         if name.endswith("_") and args:
             inplace_idx = 0
             while inplace_idx < len(args) and not isinstance(
@@ -1199,7 +1198,12 @@ class TensorVariable(VariableTracker):
             )
         return None
 
-    def _propagate_inplace_metadata(self, tx, proxy, source_var):
+    def _propagate_inplace_metadata(
+        self,
+        tx: "InstructionTranslator",
+        proxy: torch.fx.Proxy,
+        source_var: VariableTracker,
+    ) -> None:
         """
         Propagate tensor metadata from source_var to self after an inplace operation.
         This ensures that properties like requires_grad are correctly tracked during tracing.
@@ -1207,7 +1211,8 @@ class TensorVariable(VariableTracker):
         Args:
             tx: InstructionTranslator instance
             proxy: The proxy node representing the inplace operation
-            source_var: The source TensorVariable whose metadata should be propagated
+            source_var: The source VariableTracker (typically TensorVariable) whose metadata
+                should be propagated. Must be a tensor variable.
         """
         # Ignore fresh unbacked symbols that could arise during the operation
         with (
