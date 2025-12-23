@@ -531,7 +531,13 @@ class ConstDictVariable(VariableTracker):
             if not arg_hashable:
                 raise_unhashable(args[0], tx)
 
-            self.install_dict_keys_match_guard()
+            # For constant keys, no guard is needed - __setitem__ works the same
+            # whether the key exists or not. This avoids unnecessary recompilation
+            # when unused keys change.
+            # For non-constant keys, we need to guard all keys since the key itself
+            # could change behavior.
+            if not args[0].is_python_constant():
+                self.install_dict_keys_match_guard()
             if kwargs or len(args) != 2:
                 raise_args_mismatch(
                     tx,
