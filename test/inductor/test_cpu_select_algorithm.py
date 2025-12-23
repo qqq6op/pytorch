@@ -1331,14 +1331,23 @@ class TestSelectAlgorithm(BaseTestSelectAlgorithm):
     )
     @skipIfWindows(msg="Windows don't support quantize.")
     def test_quantized_linear_with_pointwise(
-        self, batch_size, in_features, out_features, bias, input_3d, symmetric_act, dtype, epilogue
+        self,
+        batch_size,
+        in_features,
+        out_features,
+        bias,
+        input_3d,
+        symmetric_act,
+        dtype,
+        epilogue,
     ):
         if symmetric_act:
-
+            from torch.ao.quantization.quantizer.x86_inductor_quantizer import (
+                X86InductorQuantizer,
+            )
             from torch.ao.quantization.quantizer.xnnpack_quantizer import (
                 get_symmetric_quantization_config,
             )
-            from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
 
             quantizer = X86InductorQuantizer()
             quantizer.set_global(get_symmetric_quantization_config(is_per_channel=True))
